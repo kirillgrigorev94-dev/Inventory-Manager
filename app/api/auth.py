@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.auth import authenticate_user, create_access_token, get_password_hash
+from app.auth import authenticate_user, create_access_token, get_current_user
 from app.schemas import Token, UserCreate
 from app.crud import create_user, get_user_by_username
 from app.models import User
@@ -30,6 +30,6 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     return {"access_token": access_token, "token_type": "bearer"}
 
 @router.get("/me")
-def read_users_me(current_user: User = Depends(lambda d: d)):  # заглушка: в реальном коде передаём через get_current_user
+def read_users_me(current_user: User = Depends(get_current_user)):
     # Здесь нужно подключить get_current_user из auth.py
     return {"id": current_user.id, "username": current_user.username}

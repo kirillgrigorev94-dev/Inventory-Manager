@@ -103,6 +103,9 @@ curl http://localhost:8000/products/1/forecast \
 bash
 pytest
 
+Запуск тестов с переменной окружения, чтобы не включался bcrypt
+$env:TEST="1"; pytest -v -s
+
 Особенности реализации
 
 Идемпотентность: поддерживается через idempotency_key в операциях.
