@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.env
+myenv/
+.venv/
+venv/
+env/
+db.sqlite3
+alembic/versions/*.py
+!alembic/versions/.gitkeep
+tests/__pycache__/
+.pytest_cache/
