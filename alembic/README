@@ -1,0 +1,31 @@
+Generic single-database configuration.
+
+Так как мы используем SQLite и создаём таблицы через Base.metadata.create_all, миграции не обязательны, но по заданию их нужно иметь.
+
+Инициализация Alembic:
+
+bash
+alembic init alembic
+
+В alembic.ini укажи:
+
+ini
+sqlalchemy.url = sqlite:///./db.sqlite3
+
+В alembic/env.py:
+
+python
+from app.database import engine
+from app.models import Base
+
+target_metadata = Base.metadata
+
+Создай миграцию:
+
+bash
+alembic revision --autogenerate -m "Initial migration"
+
+Примени:
+
+bash
+alembic upgrade head
