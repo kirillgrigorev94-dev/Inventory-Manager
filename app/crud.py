@@ -20,22 +20,24 @@ def get_products_with_stats(db: Session, user_id: int, filter_obj):
 
     products = q.all()
     result = []
+    now = datetime.now()
+
     for p in products:
         batches = [b for b in p.batches if b.status not in [models.BatchStatus.consumed, models.BatchStatus.discarded]]
         current_stock = sum(b.quantity_remaining for b in batches)
         min_exp = min((b.expires_at for b in batches if b.expires_at), default=None)
-        count_batches = len(batches)
 
         status = "enough"
         if current_stock == 0:
             status = "out_of_stock"
         elif current_stock < p.minimum_stock:
             status = "low"
-        elif min_exp and (min_exp - datetime.now()).days <= 3:
+        elif min_exp and (min_exp - now).days <= 3:
             status = "expiring_soon"
-        elif min_exp and datetime.now() > min_exp:
+        elif min_exp and now > min_exp:
             status = "expired"
 
+        # Формируем словарь с явным id и вычисляемыми полями
         result.append({
             "id": p.id,
             "name": p.name,
@@ -43,8 +45,9 @@ def get_products_with_stats(db: Session, user_id: int, filter_obj):
             "default_unit": p.default_unit,
             "minimum_stock": p.minimum_stock,
             "current_stock": current_stock,
-            # доп. поля можно добавить по необходимости
+            # "status": status,  # раскомментируй, если хочешь возвращать status
         })
+
     return result
 
 def create_user(db: Session, user: schemas.UserCreate):
@@ -69,7 +72,15 @@ def create_product(db: Session, product: schemas.ProductCreate, owner_id: int):
     db.add(db_product)
     db.commit()
     db.refresh(db_product)
-    return db_product
+    
+    return {
+        "id": db_product.id,
+        "name": db_product.name,
+        "category": db_product.category,
+        "default_unit": db_product.default_unit,
+        "minimum_stock": db_product.minimum_stock,
+        "current_stock": 0.0,  # пока нет партий — считаем 0
+    }
 
 def add_batch(
     db: Session,
@@ -110,9 +121,10 @@ def add_batch(
         price=batch.price,
     )
     db.add(db_batch)
-    db.flush()  # чтобы получить id партии до коммита
+    db.commit()
+    db.refresh(db_batch)  # Теперь у db_batch есть корректный id
 
-    # Создаем операцию purchase
+    # Создаем операцию purchase — теперь можно безопасно использовать db_batch.id
     op_key = idempotency_key or str(uuid.uuid4())
     db_operation = models.Operation(
         product_id=product_id,
@@ -122,9 +134,8 @@ def add_batch(
         idempotency_key=op_key,
     )
     db.add(db_operation)
-
     db.commit()
-    db.refresh(db_batch)
+
     return db_batch
 
 def consume_product(
@@ -217,3 +228,49 @@ def consume_product(
 
     db.commit()
     return product
+
+def search_products(db: Session, owner_id: int, query: str) -> List[dict]:
+    if not query or not query.strip():
+        return []
+
+    q = db.query(models.Product).filter(
+        models.Product.owner_id == owner_id,
+        models.Product.name.ilike(f"%{query.strip()}%")
+    )
+
+    products = q.all()
+    result = []
+    now = datetime.now()
+
+    for p in products:
+        batches = [
+            b for b in p.batches
+            if b.status not in [models.BatchStatus.consumed, models.BatchStatus.discarded]
+        ]
+        current_stock = sum(b.quantity_remaining for b in batches)
+        min_exp = min(
+            (b.expires_at for b in batches if b.expires_at),
+            default=None
+        )
+
+        status = "enough"
+        if current_stock == 0:
+            status = "out_of_stock"
+        elif current_stock < p.minimum_stock:
+            status = "low"
+        elif min_exp and (min_exp - now).days <= 3:
+            status = "expiring_soon"
+        elif min_exp and now > min_exp:
+            status = "expired"
+
+        result.append({
+            "id": p.id,
+            "name": p.name,
+            "category": p.category,
+            "default_unit": p.default_unit,
+            "minimum_stock": p.minimum_stock,
+            "current_stock": current_stock,
+            # "status": status,
+        })
+
+    return result

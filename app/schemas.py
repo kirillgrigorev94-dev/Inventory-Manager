@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional, List
 from datetime import date, datetime
 from enum import Enum
@@ -73,8 +73,8 @@ class BatchResponse(BaseModel):
     product_id: int
     quantity_initial: float
     quantity_remaining: float
-    purchased_at: datetime
-    expires_at: Optional[datetime] = None
+    purchased_at: date
+    expires_at: Optional[date] = None
     storage_location: str
     status: BatchStatus
 

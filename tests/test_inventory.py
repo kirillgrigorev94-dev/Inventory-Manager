@@ -89,7 +89,7 @@ def test_discard_batch(client, db, token):
         json={
             "quantity": 1.0,
             "purchased_at": "2026-07-01",
-            "expires_at": "2026-06-30",
+            "expires_at": "2026-08-01",
             "storage_location": "cupboard",
             "price": 80.0,
         },
@@ -98,7 +98,7 @@ def test_discard_batch(client, db, token):
     bid = b["id"]
 
     resp = client.post(
-        f"/batches/{bid}/discard",
+        f"/products/{pid}/batches/{bid}/discard",
         json={"quantity": 1.0, "reason": "expired"},
         headers=headers,
     )
